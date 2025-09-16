@@ -1,1 +1,8 @@
-# acm-su-25-ai-team-1
+# Analyzing Airfoils & Noise
+By:
+- Annika Gangrade
+- David Aldana
+- Nathan Liu
+- Nishtha Panging
+
+## Intro
