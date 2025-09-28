@@ -1,8 +1,246 @@
-# Analyzing Airfoils & Noise
-By:
-- Annika Gangrade
-- David Aldana
-- Nathan Liu
-- Nishtha Panging
+# Airfoil Self-Noise Prediction: Advanced Machine Learning Analysis
 
-## Intro
+## 
+
+View on GitHub 
+
+# Airfoil Self-Noise Prediction: Advanced Machine Learning Analysis
+
+A comprehensive machine learning project analyzing airfoil self-noise data to predict Sound Pressure Level (SSPL) using various regression techniques and advanced optimization methods.
+
+## Introduction
+
+Airfoil self-noise is a critical factor in aerodynamic design, particularly for applications in wind turbines, aircraft, and other aerodynamic systems. Understanding and predicting noise levels can help engineers optimize designs for quieter operation and improved performance.
+
+This project analyzes the NASA Airfoil Self-Noise dataset (1503 rows × 6 columns) to develop robust machine learning models that predict the Sound Pressure Level (SSPL) based on various aerodynamic parameters. The focus is on building high-performance regression models and conducting comprehensive analysis to understand the underlying relationships in the data.
+
+**Primary Research Question:** *"Can we accurately predict airfoil self-noise levels using machine learning techniques, and which aerodynamic features are most influential in noise generation?"*
+
+This predictive capability could help aerospace engineers design quieter airfoils, optimize wind turbine blade designs, and improve overall aerodynamic efficiency. The description of the relevant variables is as follows:
+
+| Variable Name | Description | Units |
+|---------------|-------------|-------|
+| f | Frequency | Hz |
+| alpha | Angle of attack | degrees |
+| c | Chord length | meters |
+| U_infinity | Free-stream velocity | m/s |
+| delta | Suction side displacement thickness | meters |
+| SSPL | Scaled sound pressure level | decibels |
+
+## Data Cleaning and Preprocessing
+
+The dataset required comprehensive preprocessing to ensure optimal model performance. Below are the key data cleaning steps performed:
+
+### **1. Outlier Detection and Removal**
+
+* Applied **Z-score analysis** with a threshold of 3 standard deviations to identify outliers
+* Removed **76 outliers** from the original 1503 data points
+* Final cleaned dataset contains **1427 observations**
+* Saved the cleaned dataset as `AirfoilSelfNoise_Cleaned.csv`
+
+### **2. Missing Value Imputation**
+
+* Used **SimpleImputer** with mean strategy for numerical features
+* Applied **mean imputation** to handle any missing values in the feature matrix
+* Ensured data integrity across all variables
+
+### **3. Duplicate Removal**
+
+* Identified and removed duplicate entries to prevent data leakage
+* Maintained data quality by ensuring unique observations
+* Final dataset shape: **1427 rows × 6 columns**
+
+### **4. Feature Scaling**
+
+* Applied **StandardScaler** to normalize all features
+* Ensured zero mean and unit variance for optimal model performance
+* Prevented feature dominance due to different scales
+
+The first few rows of our cleaned DataFrame look like this:
+
+| f | alpha | c | U_infinity | delta | SSPL |
+|---|-------|---|------------|-------|------|
+| 800 | 0.0 | 0.3048 | 71.3 | 0.002663 | 126.201 |
+| 1000 | 0.0 | 0.3048 | 71.3 | 0.002663 | 125.201 |
+| 1250 | 0.0 | 0.3048 | 71.3 | 0.002663 | 125.951 |
+| 1600 | 0.0 | 0.3048 | 71.3 | 0.002663 | 127.591 |
+| 2000 | 0.0 | 0.3048 | 71.3 | 0.002663 | 127.461 |
+
+## Exploratory Data Analysis
+
+### **Data Visualization and Distribution Analysis**
+
+#### 1. Feature and Target Distributions
+
+Comprehensive histogram analysis revealed the distribution patterns of all variables:
+- **Frequency (f)**: Shows multi-modal distribution across different frequency ranges
+- **Angle of attack (alpha)**: Ranges from 0° to approximately 22.2°
+- **Chord length (c)**: Multiple discrete values representing different airfoil sizes
+- **Free-stream velocity (U_infinity)**: Several distinct velocity levels
+- **Displacement thickness (delta)**: Continuous distribution with right skew
+- **SSPL (target)**: Approximately normal distribution centered around 125 dB
+
+#### 2. Correlation Analysis
+
+The correlation heatmap revealed important relationships:
+- **Strong correlations** between certain aerodynamic parameters
+- **Feature interactions** that suggest non-linear relationships
+- **Target correlations** indicating which features most influence noise levels
+
+### **Feature Importance Insights**
+
+Based on the analysis, the most influential features for noise prediction are:
+
+**Random Forest Feature Importance:**
+1. **Frequency (f)**: 39.52% - Most critical factor
+2. **Displacement thickness (delta)**: 38.56% - Nearly equal importance
+3. **Chord length (c)**: 11.60% - Moderate influence
+4. **Angle of attack (alpha)**: 5.25% - Lower impact
+5. **Free-stream velocity (U_infinity)**: 5.08% - Least influential
+
+**XGBoost Feature Importance:**
+1. **Chord length (c)**: 33.08% - Highest importance
+2. **Displacement thickness (delta)**: 31.31% - Close second
+3. **Frequency (f)**: 19.49% - Significant contribution
+4. **Angle of attack (alpha)**: 8.16% - Moderate impact
+5. **Free-stream velocity (U_infinity)**: 7.96% - Lower influence
+
+## Model Development and Performance
+
+### **Baseline Models**
+
+We implemented and compared several regression algorithms:
+
+#### 1. **Linear Regression**
+- **MSE**: 22.64
+- **R² Score**: 0.487
+- Simple baseline model showing moderate performance
+
+#### 2. **Decision Tree Regressor**
+- **MSE**: 6.31
+- **R² Score**: 0.857
+- Good performance with interpretable structure
+
+#### 3. **Gradient Boosting Regressor**
+- **MSE**: 7.74
+- **R² Score**: 0.824
+- Strong ensemble method performance
+
+#### 4. **Random Forest Regressor (Original)**
+- **MSE**: 3.21
+- **R² Score**: 0.927
+- Best baseline performance
+
+### **Hyperparameter Optimization**
+
+#### Grid Search Optimization
+Applied **GridSearchCV** to optimize Random Forest parameters:
+
+**Optimal Parameters Found:**
+- `max_depth`: 20
+- `min_samples_leaf`: 1
+- `min_samples_split`: 2
+- `n_estimators`: 300
+
+**Tuned Random Forest Performance:**
+- **MSE**: 3.20
+- **R² Score**: 0.9275
+- **Improvement**: Marginal but consistent enhancement
+
+### **Advanced Model Development**
+
+#### 1. **Feature Engineering**
+- Applied advanced feature selection techniques
+- Optimized feature combinations for better model performance
+- Enhanced data representation for improved predictions
+
+#### 2. **Advanced Algorithms**
+
+**XGBoost Regressor:**
+- **MSE**: 2.26
+- **R² Score**: 0.949
+- **Best overall performance**
+
+### **Cross-Validation Results**
+
+Implemented **5-fold cross-validation** for robust model evaluation:
+
+| Model | Mean R² | Std Dev | Performance |
+|-------|---------|---------|-------------|
+| **XGBoost** | 0.9318 | ±0.0284 | **Best** |
+| **Random Forest** | 0.9136 | ±0.0283 | Excellent |
+
+## Advanced Analysis and Interpretability
+
+### **SHAP Analysis**
+
+Implemented **SHAP (SHapley Additive exPlanations)** for model interpretability:
+- **Individual prediction explanations** showing feature contributions
+- **Global feature importance** rankings across all predictions
+- **Feature interaction analysis** revealing complex relationships
+
+### **Bayesian Optimization**
+
+Applied **Bayesian optimization** using scikit-optimize for advanced hyperparameter tuning:
+- **More efficient** than grid search
+- **Expanded parameter spaces** for comprehensive optimization
+- **Optimal parameter discovery** for both Random Forest and XGBoost models
+
+## Model Comparison and Final Results
+
+### **Comprehensive Performance Summary**
+
+| Model | MSE | R² Score | Category |
+|-------|-----|----------|----------|
+| **XGBoost (Optimized)** | **2.26** | **0.949** | **Best Performance** |
+| Random Forest (Tuned) | 3.20 | 0.928 | Excellent |
+| Random Forest (Original) | 3.21 | 0.927 | Excellent |
+| Decision Tree | 6.31 | 0.857 | Good |
+| Gradient Boosting | 7.74 | 0.824 | Good |
+| Linear Regression | 22.64 | 0.487 | Baseline |
+
+### **Key Findings**
+
+1. **XGBoost achieved the best performance** with R² = 0.949 and MSE = 2.26
+2. **Random Forest models showed consistent excellence** across all variations
+3. **Feature engineering provided marginal improvements** for some models
+4. **Frequency and displacement thickness** are the most critical predictive features
+5. **Cross-validation confirmed model stability** and generalization capability
+
+## Conclusions and Recommendations
+
+### **Technical Achievements**
+
+1. **High Predictive Accuracy**: Achieved R² > 0.94 with optimized XGBoost
+2. **Robust Model Validation**: 5-fold cross-validation ensures reliable performance
+3. **Comprehensive Feature Analysis**: Identified key aerodynamic parameters
+4. **Advanced Optimization**: Bayesian methods for optimal hyperparameters
+5. **Model Interpretability**: SHAP analysis for understanding predictions
+
+### **Practical Applications**
+
+1. **Aerodynamic Design**: Optimize airfoil shapes for reduced noise
+2. **Wind Turbine Engineering**: Design quieter blade profiles
+3. **Aircraft Development**: Minimize noise pollution in aviation
+4. **Research Tool**: Understand noise generation mechanisms
+5. **Quality Control**: Predict noise levels in manufacturing
+
+### **Future Enhancements**
+
+1. **Deep Learning**: Explore neural network architectures for complex patterns
+2. **Ensemble Methods**: Combine multiple models for improved accuracy
+3. **Real-time Prediction**: Deploy models for live noise monitoring
+4. **Domain Integration**: Incorporate aerodynamic theory into feature engineering
+5. **Automated ML**: Use AutoML for comprehensive model exploration
+
+### **Model Deployment Recommendations**
+
+- **Production Model**: Use optimized XGBoost for best accuracy
+- **Interpretable Model**: Use Random Forest when explainability is crucial
+- **Real-time Applications**: Consider model complexity vs. inference speed
+- **Monitoring**: Track feature importance for model drift detection
+- **Updates**: Regular retraining with new aerodynamic data
+
+---
+
+*This analysis demonstrates the power of comprehensive machine learning approaches in solving complex engineering problems, achieving high predictive accuracy while maintaining model interpretability and practical applicability.*
