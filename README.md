@@ -74,12 +74,16 @@ Comprehensive histogram analysis revealed the distribution patterns of all varia
 - **Displacement thickness (delta)**: Continuous distribution with right skew
 - **SSPL (target)**: Approximately normal distribution centered around 125 dB
 
+<img width="1389" height="1180" alt="Feature Correlation Histogram" src="https://github.com/user-attachments/assets/4d8d7788-573a-4f6c-aa13-464d3130acaa" />
+
 #### 2. Correlation Analysis
 
 The correlation heatmap revealed important relationships:
 - **Strong correlations** between certain aerodynamic parameters
 - **Feature interactions** that suggest non-linear relationships
 - **Target correlations** indicating which features most influence noise levels
+
+<img width="916" height="836" alt="Feature Correlation Heatmap" src="https://github.com/user-attachments/assets/56f375a5-329c-453b-a81e-35454a01bf36" />
 
 ### **Feature Importance Insights**
 
