@@ -1,6 +1,13 @@
 
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+// Utility to map SSPL to gain (volume), e.g., normalize to [0,1]
+function ssplToGain(sspl, minSSPL, maxSSPL) {
+  // Map SSPL linearly to [0.1, 1] for audibility, avoid 0
+  if (maxSSPL === minSSPL) return 0.5;
+  return 0.1 + 0.9 * ((sspl - minSSPL) / (maxSSPL - minSSPL));
+}
+
 
 
 const featureNames = [
@@ -25,6 +32,92 @@ function App() {
     delta: '',
   });
   const [results, setResults] = useState([]); // [{f, sspl}]
+  const [playing, setPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.5); // 0 to 1
+  const audioCtxRef = useRef(null);
+  const masterGainRef = useRef(null);
+  const oscillatorsRef = useRef([]);
+  // Play wind/static sound, modulating filter cutoff to follow SSPL profile
+  const handlePlayAll = () => {
+    if (!results.length || playing) return;
+    setPlaying(true);
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtxRef.current = audioCtx;
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = volume;
+    masterGain.connect(audioCtx.destination);
+    masterGainRef.current = masterGain;
+
+    // Create white noise buffer
+    const bufferSize = 2 * audioCtx.sampleRate;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    const whiteNoise = audioCtx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+    whiteNoise.loop = true;
+
+    // Create a filter to sweep through the frequency bands
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 1.5;
+    filter.frequency.value = results[0].f;
+
+    whiteNoise.connect(filter).connect(masterGain);
+    whiteNoise.start();
+
+    // Animate the filter cutoff to follow the SSPL profile
+    let frame = 0;
+    const totalFrames = results.length;
+    let stopped = false;
+    // Precompute min/max SSPL for normalization
+    const minSSPL = Math.min(...results.map(r => r.sspl));
+    const maxSSPL = Math.max(...results.map(r => r.sspl));
+    function animate() {
+      if (!stopped && playing) {
+        const { f, sspl } = results[frame % totalFrames];
+        filter.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.05);
+        // Modulate gain by SSPL for more realism
+        const gain = ssplToGain(sspl, minSSPL, maxSSPL) * volume;
+        masterGain.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.05);
+        frame++;
+        requestAnimationFrame(animate);
+      }
+    }
+    animate();
+
+    // Store references for stopping
+    oscillatorsRef.current = [whiteNoise, filter];
+  };
+
+  // Stop the wind/static sound
+  const handleStop = () => {
+    setPlaying(false);
+    if (oscillatorsRef.current.length) {
+      const [whiteNoise] = oscillatorsRef.current;
+      try { whiteNoise.stop(); } catch {}
+      oscillatorsRef.current = [];
+    }
+    if (masterGainRef.current) {
+      try { masterGainRef.current.disconnect(); } catch {}
+      masterGainRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      try { audioCtxRef.current.close(); } catch {}
+      audioCtxRef.current = null;
+    }
+  };
+
+  // Update master gain when volume changes
+  const handleVolumeChange = (e) => {
+    const v = Number(e.target.value);
+    setVolume(v);
+    if (masterGainRef.current) {
+      masterGainRef.current.gain.value = v;
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -56,6 +149,11 @@ function App() {
       });
       const allResults = await Promise.all(promises);
       setResults(allResults);
+      // If wind is currently playing, restart it with new results
+      if (playing) {
+        handleStop();
+        setTimeout(() => handlePlayAll(), 100); // slight delay to ensure stop completes
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -95,6 +193,35 @@ function App() {
       {results.length > 0 && (
         <div className="w-full max-w-2xl bg-white shadow rounded p-4 mb-4">
           <h2 className="text-lg font-bold mb-2">SSPL vs Frequency</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              onClick={handlePlayAll}
+              disabled={playing}
+            >
+              {playing ? 'Playing...' : 'Play All Frequencies'}
+            </button>
+            <button
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              onClick={handleStop}
+              disabled={!playing}
+            >
+              Stop
+            </button>
+            <label className="flex items-center gap-2">
+              <span>Volume</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-32"
+                disabled={!results.length}
+              />
+            </label>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr>
