@@ -1,7 +1,7 @@
 # Analyzing Airfoils & Noise
 By:
 - Annika Gangrade
-- David Aldana
+- David Aldanaa
 - Nathan Liu
 - Nishtha Panging
 
