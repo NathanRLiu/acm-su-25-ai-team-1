@@ -1,11 +1,5 @@
 # Airfoil Self-Noise Prediction: Advanced Machine Learning Analysis
 
-## 
-
-View on GitHub 
-
-# Airfoil Self-Noise Prediction: Advanced Machine Learning Analysis
-
 A comprehensive machine learning project analyzing airfoil self-noise data to predict Sound Pressure Level (SSPL) using various regression techniques and advanced optimization methods.
 
 ## Introduction
