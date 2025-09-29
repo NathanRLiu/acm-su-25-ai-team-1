@@ -32,6 +32,7 @@ function App() {
     delta: '',
   });
   const [results, setResults] = useState([]); // [{f, sspl}]
+  const resultsRef = useRef([]); // <--- new ref for results
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5); // 0 to 1
   const audioCtxRef = useRef(null);
@@ -39,7 +40,7 @@ function App() {
   const oscillatorsRef = useRef([]);
   // Play wind/static sound, modulating filter cutoff to follow SSPL profile
   const handlePlayAll = () => {
-    if (!results.length || playing) return;
+    if (!resultsRef.current.length || playing) return;
     setPlaying(true);
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     audioCtxRef.current = audioCtx;
@@ -47,6 +48,11 @@ function App() {
     masterGain.gain.value = volume;
     masterGain.connect(audioCtx.destination);
     masterGainRef.current = masterGain;
+
+    // Precompute min/max SSPL for normalization
+    const currentResults = resultsRef.current;
+    const minSSPL = Math.min(...currentResults.map(r => r.sspl));
+    const maxSSPL = Math.max(...currentResults.map(r => r.sspl));
 
     // Create white noise buffer
     const bufferSize = 2 * audioCtx.sampleRate;
@@ -59,37 +65,29 @@ function App() {
     whiteNoise.buffer = noiseBuffer;
     whiteNoise.loop = true;
 
-    // Create a filter to sweep through the frequency bands
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.Q.value = 1.5;
-    filter.frequency.value = results[0].f;
+    // For each frequency, create a bandpass filter and gain node
+    const filterNodes = [];
+    const gainNodes = [];
+    currentResults.forEach(({ f, sspl }) => {
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.value = 10; // Narrow band
+      filter.frequency.value = f;
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = ssplToGain(sspl, minSSPL, maxSSPL) * volume;
+      filter.connect(gainNode).connect(masterGain);
+      filterNodes.push(filter);
+      gainNodes.push(gainNode);
+    });
 
-    whiteNoise.connect(filter).connect(masterGain);
+    // Connect white noise to all filters
+    filterNodes.forEach(filter => {
+      whiteNoise.connect(filter);
+    });
     whiteNoise.start();
 
-    // Animate the filter cutoff to follow the SSPL profile
-    let frame = 0;
-    const totalFrames = results.length;
-    let stopped = false;
-    // Precompute min/max SSPL for normalization
-    const minSSPL = Math.min(...results.map(r => r.sspl));
-    const maxSSPL = Math.max(...results.map(r => r.sspl));
-    function animate() {
-      if (!stopped && playing) {
-        const { f, sspl } = results[frame % totalFrames];
-        filter.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.05);
-        // Modulate gain by SSPL for more realism
-        const gain = ssplToGain(sspl, minSSPL, maxSSPL) * volume;
-        masterGain.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.05);
-        frame++;
-        requestAnimationFrame(animate);
-      }
-    }
-    animate();
-
     // Store references for stopping
-    oscillatorsRef.current = [whiteNoise, filter];
+    oscillatorsRef.current = [whiteNoise, ...filterNodes, ...gainNodes];
   };
 
   // Stop the wind/static sound
@@ -149,11 +147,8 @@ function App() {
       });
       const allResults = await Promise.all(promises);
       setResults(allResults);
-      // If wind is currently playing, restart it with new results
-      if (playing) {
-        handleStop();
-        setTimeout(() => handlePlayAll(), 100); // slight delay to ensure stop completes
-      }
+      resultsRef.current = allResults; // update ref for audio
+      // No need to stop/restart audio, animation will pick up new results
     } catch (err) {
       setError(err.message);
     } finally {
@@ -190,7 +185,7 @@ function App() {
         </button>
         {error && <p className="text-red-500 mt-2">{error}</p>}
       </form>
-      {results.length > 0 && (
+  {results.length > 0 && (
         <div className="w-full max-w-2xl bg-white shadow rounded p-4 mb-4">
           <h2 className="text-lg font-bold mb-2">SSPL vs Frequency</h2>
           <div className="flex items-center gap-4 mb-4">
@@ -240,6 +235,21 @@ function App() {
           </table>
         </div>
       )}
+      <button
+        className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+        onClick={() => {
+          // Create a test pattern: alternating high/low SSPL
+          const testResults = Array.from({length: FREQ_POINTS}, (_, i) => ({
+            f: Math.round(Math.exp(Math.log(FREQ_MIN) + (Math.log(FREQ_MAX) - Math.log(FREQ_MIN)) * i / (FREQ_POINTS - 1))),
+            sspl: i % 2 === 0 ? 100 : 10
+          }));
+          setResults(testResults);
+          resultsRef.current = testResults;
+        }}
+        type="button"
+      >
+        Test Noticeable Audio Pattern
+      </button>
       <p className="text-gray-500 text-xs">Enter the airfoil features (except frequency) and get SSPL predictions across frequency bands.</p>
     </div>
   );
