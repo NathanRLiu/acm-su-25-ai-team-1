@@ -148,7 +148,21 @@ function App() {
       const allResults = await Promise.all(promises);
       setResults(allResults);
       resultsRef.current = allResults; // update ref for audio
-      // No need to stop/restart audio, animation will pick up new results
+
+      // Smoothly update gain nodes if audio is playing and nodes exist
+      if (playing && oscillatorsRef.current.length > 0 && masterGainRef.current && audioCtxRef.current) {
+        // oscillatorsRef.current = [whiteNoise, ...filterNodes, ...gainNodes]
+        const gainNodes = oscillatorsRef.current.slice(1 + FREQ_POINTS); // after whiteNoise and filters
+        const minSSPL = Math.min(...allResults.map(r => r.sspl));
+        const maxSSPL = Math.max(...allResults.map(r => r.sspl));
+        allResults.forEach((result, i) => {
+          const gainNode = gainNodes[i];
+          if (gainNode && gainNode.gain) {
+            const newGain = ssplToGain(result.sspl, minSSPL, maxSSPL) * volume;
+            gainNode.gain.setTargetAtTime(newGain, audioCtxRef.current.currentTime, 0.1);
+          }
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
