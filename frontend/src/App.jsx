@@ -18,8 +18,8 @@ const featureNames = [
 ];
 
 // Frequency range for log sweep (Hz)
-const FREQ_MIN = 100;
-const FREQ_MAX = 10000;
+const FREQ_MIN = 20;
+const FREQ_MAX = 20000;
 const FREQ_POINTS = 30;
 
 
