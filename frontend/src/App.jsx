@@ -348,7 +348,7 @@ function App() {
         </div>
   </div>
 
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md">
+      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-xl px-8 pt-6 pb-8 mb-4 w-full max-w-md">
         <label className="block text-gray-700 text-sm font-bold mb-2">Model Inputs (Frequency will be swept automatically)</label>
         {/* Render other inputs except alpha */}
         {featureNames.filter(f => f.key !== 'alpha').map((feature) => (
@@ -356,20 +356,21 @@ function App() {
             <label className="block text-gray-700 text-xs font-bold mb-1" htmlFor={feature.key}>{feature.label}</label>
             {feature.key === 'U_infinity' ? (
               <div className="flex flex-col">
-                <input
-                  type="range"
-                  name="U_infinity"
-                  id="U_infinity"
-                  min="0"
-                  max="150"
-                  step="1"
-                  value={inputs.U_infinity}
-                  onChange={handleInputChange}
-                  className="w-full" style={{ minWidth: '350px', maxWidth: '100%' }}
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <div className="relative w-full flex items-center">
+                  <input
+                    type="range"
+                    name="U_infinity"
+                    id="U_infinity"
+                    min="0"
+                    max="150"
+                    step="1"
+                    value={inputs.U_infinity}
+                    onChange={handleInputChange}
+                    className="w-full accent-blue-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                    style={{ minWidth: '350px', maxWidth: '100%' }}
+                  />
+                  <span className="absolute right-0 -top-7 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded shadow" style={{minWidth:'48px', textAlign:'center'}}>{inputs.U_infinity} m/s</span>
                 </div>
-                <div className="text-right text-sm font-semibold text-blue-700 mt-1">{inputs.U_infinity} m/s</div>
               </div>
             ) : (
               <input
@@ -379,7 +380,7 @@ function App() {
                 id={feature.key}
                 value={inputs[feature.key]}
                 onChange={handleInputChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
                 required
               />
             )}
@@ -387,7 +388,7 @@ function App() {
         ))}
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 w-full flex items-center justify-center gap-2 transition-all shadow-md hover:scale-105"
           disabled={loading}
         >
           {loading ? 'Sweeping Frequencies...' : 'Predict Audio'}
@@ -395,55 +396,58 @@ function App() {
         {error && <p className="text-red-500 mt-2">{error}</p>}
       </form>
   {results.length > 0 && (
-        <div className="w-full max-w-2xl bg-white shadow rounded p-4 mb-4">
-          <h2 className="text-lg font-bold mb-2">SSPL vs Frequency</h2>
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              onClick={handlePlayAll}
-              disabled={playing}
-            >
-              {playing ? 'Playing...' : 'Play All Frequencies'}
-            </button>
-            <button
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              onClick={handleStop}
-              disabled={!playing}
-            >
-              Stop
-            </button>
-            <label className="flex items-center gap-2">
-              <span>Volume</span>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="w-32"
-                disabled={!results.length}
-              />
-            </label>
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                <th className="text-left">Frequency (Hz)</th>
-                <th className="text-left">Predicted SSPL(dB)</th>
+    <div className="w-full max-w-2xl bg-white shadow-lg rounded-xl p-6 mb-4">
+      <h2 className="text-lg font-bold mb-4">SSPL vs Frequency</h2>
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          className={`font-bold px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all shadow-md hover:scale-105 h-12 w-56 flex items-center justify-center gap-2 ${playing ? 'bg-red-500 hover:bg-red-700 text-white focus:ring-red-400' : 'bg-green-500 hover:bg-green-700 text-white focus:ring-green-400'}`}
+          style={{height: '48px', width: '224px', display: 'flex', alignItems: 'center', justifyContent: 'center'}} // fixed height and width for button
+          onClick={playing ? handleStop : handlePlayAll}
+          disabled={false}
+        >
+          {playing ? (
+            <svg style={{height:'24px', width:'24px', display: 'block', marginRight: '0.5rem'}} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          ) : (
+            <svg style={{height:'24px', width:'24px', display: 'block', marginRight: '0.5rem'}} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v18l15-9-15-9z" /></svg>
+          )}
+          <span style={{lineHeight: '1', display: 'block'}}>{playing ? 'Stop' : 'Play'}</span>
+        </button>
+        <label className="flex items-center gap-2">
+          <span>Volume</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={handleVolumeChange}
+            className="w-32 accent-blue-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+            disabled={!results.length}
+          />
+        </label>
+      </div>
+      <div className="overflow-x-auto rounded-lg">
+        <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="text-left px-3 py-2 font-semibold">Frequency (Hz)</th>
+              <th className="text-left px-3 py-2 font-semibold">Predicted SSPL(dB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map(({f, sspl}, i) => (
+              <tr key={f} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className="px-3 py-2">{f}</td>
+                <td className="px-3 py-2">
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold ${sspl > 100 ? 'bg-red-100 text-red-700' : sspl < 60 ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>{sspl.toFixed(3)}</span>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {results.map(({f, sspl}) => (
-                <tr key={f}>
-                  <td>{f}</td>
-                  <td>{sspl.toFixed(3)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
     </div>
   </div>
   );
