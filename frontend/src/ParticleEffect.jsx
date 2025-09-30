@@ -13,11 +13,11 @@ function ParticleEffect({ U_infinity }) {
   // Animate particles
   React.useEffect(() => {
     let running = true;
-    // Calculate the single speed for all particles
-    const minSpeed = 1;
-    const maxSpeed = 20;
-    const u = Math.max(0, Math.min(U_infinity, 100)); // clamp 0-100
-    const speed = minSpeed + (maxSpeed - minSpeed) * (u / 100);
+  // Calculate the global speed for all particles (not stored per-particle)
+  const minSpeed = 1;
+  const maxSpeed = 20;
+  const u = Math.max(0, Math.min(U_infinity, 100)); // clamp 0-100
+  const globalSpeed = minSpeed + (maxSpeed - minSpeed) * (u / 100);
     function randomNormal() {
       // Box-Muller transform for standard normal
       let u = 0, v = 0;
@@ -42,7 +42,6 @@ function ParticleEffect({ U_infinity }) {
           y,
           size: 6 + Math.random() * 8,
           opacity: 0.5 + Math.random() * 0.5,
-          speed, // global speed
           relSpeed, // small relative speed
         },
       ]);
@@ -58,7 +57,7 @@ function ParticleEffect({ U_infinity }) {
     const moveInterval = setInterval(() => {
       setParticles(particles =>
         particles
-          .map(p => ({ ...p, x: p.x - (p.speed + (p.relSpeed || 0)) }))
+          .map(p => ({ ...p, x: p.x - (globalSpeed + (p.relSpeed || 0)) }))
           .filter(p => p.x > -20)
       );
     }, 16);
@@ -67,7 +66,7 @@ function ParticleEffect({ U_infinity }) {
       clearInterval(spawnIntervalId);
       clearInterval(moveInterval);
     };
-  }, [containerWidth, U_infinity]);
+  }, [containerWidth, U_infinity, particles.length]);
   // Render as absolutely positioned dots in a full-width, fixed-height container
   return (
     <>

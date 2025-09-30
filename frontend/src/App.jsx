@@ -29,7 +29,7 @@ function App() {
   const [inputs, setInputs] = useState({
     alpha: '',
     c: '0.3048',
-    U_infinity: '',
+    U_infinity: '0',
     delta: '0.00266337',
   });
   // Ref to track last alpha value for auto-fetch
