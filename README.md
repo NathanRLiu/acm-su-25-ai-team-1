@@ -29,7 +29,7 @@ This predictive capability could help aerospace engineers design quieter airfoil
 
 The following diagram displays each feature in relation to an aircraft and the blade sections:
 
-<img width="1024" height="1024" alt="Feature Diagram" src="https://github.com/user-attachments/assets/4fce4bed-41a6-45ad-8290-a766ae3cfc99" />
+<img width="902" height="659" alt="Feature Diagram" src="https://github.com/user-attachments/assets/db00bdc4-1496-48a5-a550-3159716fe078" />
  
 ## Data Cleaning and Preprocessing
 
