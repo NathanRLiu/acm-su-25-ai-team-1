@@ -1,6 +1,6 @@
 
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 // Utility to map SSPL to gain (volume), e.g., normalize to [0,1]
 function ssplToGain(sspl, minSSPL, maxSSPL) {
   // Map SSPL linearly to [0.1, 1] for audibility, avoid 0
@@ -170,12 +170,112 @@ function App() {
     }
   };
 
+  // --- Drag-to-rotate logic for angle (alpha) ---
+  const planeRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+  // Angle in degrees, display the true signed value for rotation
+  const [displayAngle, setDisplayAngle] = useState(0);
+  const angle = Number(displayAngle) || 0;
+
+  // Mouse/touch event handlers
+  const handlePlanePointerDown = useCallback((e) => {
+    e.preventDefault();
+    setDragging(true);
+    // Get center of plane visual
+    const rect = planeRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    setDragStart({
+      cx,
+      cy,
+      startAngle: angle,
+    });
+    document.body.style.userSelect = 'none';
+  }, [angle]);
+  const handlePlanePointerMove = useCallback((e) => {
+    if (!dragging || !dragStart) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - dragStart.cx;
+    const dy = clientY - dragStart.cy;
+    // atan2 gives angle in radians
+    let theta = Math.atan2(dy, dx) * 180 / Math.PI;
+  // Clamp to [-50, 50] for display and input
+  theta = Math.max(-50, Math.min(50, theta));
+  setDisplayAngle(theta);
+  setInputs(inputs => ({ ...inputs, alpha: Math.abs(theta).toFixed(1) }));
+  }, [dragging, dragStart]);
+  const handlePlanePointerUp = useCallback(() => {
+    setDragging(false);
+    setDragStart(null);
+    document.body.style.userSelect = '';
+  }, []);
+  // Attach/detach listeners
+  React.useEffect(() => {
+    if (dragging) {
+      window.addEventListener('mousemove', handlePlanePointerMove);
+      window.addEventListener('touchmove', handlePlanePointerMove);
+      window.addEventListener('mouseup', handlePlanePointerUp);
+      window.addEventListener('touchend', handlePlanePointerUp);
+    } else {
+      window.removeEventListener('mousemove', handlePlanePointerMove);
+      window.removeEventListener('touchmove', handlePlanePointerMove);
+      window.removeEventListener('mouseup', handlePlanePointerUp);
+      window.removeEventListener('touchend', handlePlanePointerUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handlePlanePointerMove);
+      window.removeEventListener('touchmove', handlePlanePointerMove);
+      window.removeEventListener('mouseup', handlePlanePointerUp);
+      window.removeEventListener('touchend', handlePlanePointerUp);
+    };
+  }, [dragging, dragStart, handlePlanePointerMove, handlePlanePointerUp]);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
       <h1 className="text-3xl font-bold mb-6">Airfoil Noise Model Predictor</h1>
+      {/* Large central plane visual for angle */}
+      <div className="flex flex-col items-center mb-8">
+        <div
+          ref={planeRef}
+          className="select-none cursor-grab relative"
+          style={{
+            width: '8rem',
+            height: '8rem',
+            transform: `rotate(${angle}deg)`,
+            transition: dragging ? 'none' : 'transform 0.2s',
+            userSelect: 'none',
+          }}
+          onMouseDown={handlePlanePointerDown}
+          onTouchStart={handlePlanePointerDown}
+        >
+          <img
+            src="/fighter_jet.png"
+            alt="Fighter Jet"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+            draggable={false}
+          />
+          {/* Angle label overlay */}
+          <span className="absolute left-1/2 top-1/2 text-2xl font-bold text-blue-700" style={{transform:'translate(-50%,120%)'}}>
+            {angle.toFixed(1)}°
+          </span>
+        </div>
+        <div className="text-gray-700 mt-2">Drag the plane to set Angle of Attack (alpha)</div>
+      </div>
       <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md">
         <label className="block text-gray-700 text-sm font-bold mb-2">Model Inputs (Frequency will be swept automatically)</label>
-        {featureNames.map((feature) => (
+        {/* Render other inputs except alpha */}
+        {featureNames.filter(f => f.key !== 'alpha').map((feature) => (
           <div key={feature.key} className="mb-4">
             <label className="block text-gray-700 text-xs font-bold mb-1" htmlFor={feature.key}>{feature.label}</label>
             <input
