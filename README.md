@@ -50,6 +50,8 @@ The dataset required comprehensive preprocessing to ensure optimal model perform
 * Ensured zero mean and unit variance for optimal model performance
 * Prevented feature dominance due to different scales
 
+**Note:** We didn't encode the independent and dependent variables because all of the values in the csv file are already floats. Encoding is only needed when there is categorical data or labels that need to be converted to numerical values.
+
 The first few rows of our cleaned DataFrame look like this:
 
 | f | alpha | c | U_infinity | delta | SSPL |
