@@ -26,6 +26,10 @@ This predictive capability could help aerospace engineers design quieter airfoil
 - Chord length is a straight-line distance from the front-most part of the airfoil (leading edge) to its back-most part (trailing edge).
 - Free-stream velocity is the velocity of the wind before it reaches the airfoil. The reason the velocity of the wind before it reaches the airfoil is used as opposed to during it's interaction with the airfoil is because the wind will either slow down or speed up as it goes under or over the airfoil respectively. Additionally, the reason the velocity of the wind isn't used after it interacts with the airfoil is because turbulence may influence the velocity. These are factors that we are unable to control. As such, using the free-stream velocity provides a consistent baseline for which we can control.
 - Suction side displacement thickness is how the boundary layer slows the air near the airfoil surface. The boundary layer is the thin layer of air right next to the airfoil surface where friction slows the airflow from zero at the surface to nearly the free-stream velocity. Because of this slowed region, the outer flow behaves as if the airfoil were a little thicker than it actually is. This extra thickness is called the displacement thickness, and it matters because it affects turbulence and the noise generated at the airfoil’s trailing edge.
+
+The following diagram displays each feature in relation to an aircraft and the blade sections:
+
+<img width="1024" height="1024" alt="Feature Diagram" src="https://github.com/user-attachments/assets/4fce4bed-41a6-45ad-8290-a766ae3cfc99" />
  
 ## Data Cleaning and Preprocessing
 
