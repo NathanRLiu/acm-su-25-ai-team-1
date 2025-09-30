@@ -1,6 +1,7 @@
 
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import ParticleEffect from './ParticleEffect';
 // Utility to map SSPL to gain (volume), e.g., normalize to [0,1]
 function ssplToGain(sspl, minSSPL, maxSSPL) {
   // Map SSPL linearly to [0.1, 1] for audibility, avoid 0
@@ -12,9 +13,9 @@ function ssplToGain(sspl, minSSPL, maxSSPL) {
 
 const featureNames = [
   { key: 'alpha', label: 'Angle of Attack (alpha)' },
-  { key: 'c', label: 'Chord Length (c)' },
-  { key: 'U_infinity', label: 'Free-stream Velocity (U_infinity)' },
-  { key: 'delta', label: 'Suction Side Displacement Thickness (delta)' },
+  { key: 'c', label: 'Chord Length (meters)' },
+  { key: 'U_infinity', label: 'Free-stream Velocity (meters per second)' },
+  { key: 'delta', label: 'Suction Side Displacement Thickness (meters)' },
 ];
 
 // Frequency range for log sweep (Hz)
@@ -27,10 +28,12 @@ function App() {
   // Only ask user for non-frequency features
   const [inputs, setInputs] = useState({
     alpha: '',
-    c: '',
+    c: '0.3048',
     U_infinity: '',
-    delta: '',
+    delta: '0.00266337',
   });
+  // Ref to track last alpha value for auto-fetch
+  const lastAlphaRef = useRef('');
   const [results, setResults] = useState([]); // [{f, sspl}]
   const resultsRef = useRef([]); // <--- new ref for results
   const [playing, setPlaying] = useState(false);
@@ -44,8 +47,16 @@ function App() {
     setPlaying(true);
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     audioCtxRef.current = audioCtx;
+    // Scale volume for low U_infinity
+    const u = Number(inputs.U_infinity) || 0;
+    let velocityScale = 1;
+    if (u < 30) {
+      // Use log scale: scale = log10(1 + 9 * (u/30))
+      // u=0 -> 0, u=30 -> 1, smooth log curve
+      velocityScale = Math.log10(1 + 9 * (u / 30));
+    }
     const masterGain = audioCtx.createGain();
-    masterGain.gain.value = volume;
+    masterGain.gain.value = volume * velocityScale;
     masterGain.connect(audioCtx.destination);
     masterGainRef.current = masterGain;
 
@@ -155,10 +166,16 @@ function App() {
         const gainNodes = oscillatorsRef.current.slice(1 + FREQ_POINTS); // after whiteNoise and filters
         const minSSPL = Math.min(...allResults.map(r => r.sspl));
         const maxSSPL = Math.max(...allResults.map(r => r.sspl));
+        // Also apply velocity scaling to gain nodes
+        const u = Number(inputs.U_infinity) || 0;
+        let velocityScale = 1;
+        if (u < 30) {
+          velocityScale = Math.log10(1 + 9 * (u / 30));
+        }
         allResults.forEach((result, i) => {
           const gainNode = gainNodes[i];
           if (gainNode && gainNode.gain) {
-            const newGain = ssplToGain(result.sspl, minSSPL, maxSSPL) * volume;
+            const newGain = ssplToGain(result.sspl, minSSPL, maxSSPL) * volume * velocityScale;
             gainNode.gain.setTargetAtTime(newGain, audioCtxRef.current.currentTime, 0.1);
           }
         });
@@ -232,20 +249,79 @@ function App() {
     };
   }, [dragging, dragStart, handlePlanePointerMove, handlePlanePointerUp]);
 
+  // Poll for new audio every 200ms while dragging plane or changing U_infinity, and fetch once when released
+  useEffect(() => {
+    let pollInterval = null;
+    // Helper to fetch audio if alpha or U_infinity changed
+    const fetchIfChanged = () => {
+      const alphaChanged = inputs.alpha !== lastAlphaRef.current && inputs.alpha !== '' && !isNaN(Number(inputs.alpha));
+      const uChanged = inputs.U_infinity !== lastAlphaRef.currentU && inputs.U_infinity !== '' && !isNaN(Number(inputs.U_infinity));
+      if (alphaChanged || uChanged) {
+        lastAlphaRef.current = inputs.alpha;
+        lastAlphaRef.currentU = inputs.U_infinity;
+        handleSubmit({ preventDefault: () => {} });
+      }
+    };
+    const isSliderActive = typeof window !== 'undefined' && window.isUInfinitySliding;
+    if (dragging || isSliderActive) {
+      pollInterval = setInterval(fetchIfChanged, 50);
+    } else {
+      // Only fetch once on drag/slider release if there was a change
+      fetchIfChanged();
+    }
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [inputs.alpha, inputs.U_infinity, dragging]);
+
+  // Track U_infinity slider drag state
+  useEffect(() => {
+    const slider = document.getElementById('U_infinity');
+    if (!slider) return;
+    const handleDown = () => { window.isUInfinitySliding = true; };
+    const handleUp = () => { window.isUInfinitySliding = false; };
+    slider.addEventListener('mousedown', handleDown);
+    slider.addEventListener('touchstart', handleDown);
+    slider.addEventListener('mouseup', handleUp);
+    slider.addEventListener('touchend', handleUp);
+    slider.addEventListener('mouseleave', handleUp);
+    return () => {
+      slider.removeEventListener('mousedown', handleDown);
+      slider.removeEventListener('touchstart', handleDown);
+      slider.removeEventListener('mouseup', handleUp);
+      slider.removeEventListener('touchend', handleUp);
+      slider.removeEventListener('mouseleave', handleUp);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+    <div style={{height: '100vh'}}>
+  <div className="min-h-screen flex flex-col items-center bg-gray-100 pt-8 px-4">
       <h1 className="text-3xl font-bold mb-6">Airfoil Noise Model Predictor</h1>
+      <div className="text-gray-700 mt-2" style={{zIndex:3, position:'relative'}}>Drag the plane to set Angle of Attack (alpha)</div>
       {/* Large central plane visual for angle */}
-      <div className="flex flex-col items-center mb-8">
+      <div
+        className="flex flex-col items-center mb-8 overflow-hidden pr-3"
+        style={{
+          position: 'relative',
+          width: '8rem',
+          height: '8rem',
+        }}
+      >
+        {/* Particle effect container */}
+  <ParticleEffect U_infinity={Number(inputs.U_infinity) || 0} />
+        {/* Plane visual, higher z-index */}
         <div
           ref={planeRef}
-          className="select-none cursor-grab relative"
+          className="select-none absolute left-0 top-0"
           style={{
             width: '8rem',
             height: '8rem',
+            marginLeft: '4rem',
             transform: `rotate(${angle}deg)`,
             transition: dragging ? 'none' : 'transform 0.2s',
             userSelect: 'none',
+            cursor: dragging ? 'grabbing': 'grab',
           }}
           onMouseDown={handlePlanePointerDown}
           onTouchStart={handlePlanePointerDown}
@@ -270,24 +346,43 @@ function App() {
             {angle.toFixed(1)}°
           </span>
         </div>
-        <div className="text-gray-700 mt-2">Drag the plane to set Angle of Attack (alpha)</div>
-      </div>
+  </div>
+
       <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md">
         <label className="block text-gray-700 text-sm font-bold mb-2">Model Inputs (Frequency will be swept automatically)</label>
         {/* Render other inputs except alpha */}
         {featureNames.filter(f => f.key !== 'alpha').map((feature) => (
           <div key={feature.key} className="mb-4">
             <label className="block text-gray-700 text-xs font-bold mb-1" htmlFor={feature.key}>{feature.label}</label>
-            <input
-              type="number"
-              step="any"
-              name={feature.key}
-              id={feature.key}
-              value={inputs[feature.key]}
-              onChange={handleInputChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
+            {feature.key === 'U_infinity' ? (
+              <div className="flex flex-col">
+                <input
+                  type="range"
+                  name="U_infinity"
+                  id="U_infinity"
+                  min="0"
+                  max="150"
+                  step="1"
+                  value={inputs.U_infinity}
+                  onChange={handleInputChange}
+                  className="w-full" style={{ minWidth: '350px', maxWidth: '100%' }}
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                </div>
+                <div className="text-right text-sm font-semibold text-blue-700 mt-1">{inputs.U_infinity} m/s</div>
+              </div>
+            ) : (
+              <input
+                type="number"
+                step="any"
+                name={feature.key}
+                id={feature.key}
+                value={inputs[feature.key]}
+                onChange={handleInputChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+            )}
           </div>
         ))}
         <button
@@ -295,7 +390,7 @@ function App() {
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
           disabled={loading}
         >
-          {loading ? 'Sweeping Frequencies...' : 'Sweep Frequency & Predict'}
+          {loading ? 'Sweeping Frequencies...' : 'Predict Audio'}
         </button>
         {error && <p className="text-red-500 mt-2">{error}</p>}
       </form>
@@ -335,7 +430,7 @@ function App() {
             <thead>
               <tr>
                 <th className="text-left">Frequency (Hz)</th>
-                <th className="text-left">Predicted SSPL</th>
+                <th className="text-left">Predicted SSPL(dB)</th>
               </tr>
             </thead>
             <tbody>
@@ -349,23 +444,8 @@ function App() {
           </table>
         </div>
       )}
-      <button
-        className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
-        onClick={() => {
-          // Create a test pattern: alternating high/low SSPL
-          const testResults = Array.from({length: FREQ_POINTS}, (_, i) => ({
-            f: Math.round(Math.exp(Math.log(FREQ_MIN) + (Math.log(FREQ_MAX) - Math.log(FREQ_MIN)) * i / (FREQ_POINTS - 1))),
-            sspl: i % 2 === 0 ? 100 : 10
-          }));
-          setResults(testResults);
-          resultsRef.current = testResults;
-        }}
-        type="button"
-      >
-        Test Noticeable Audio Pattern
-      </button>
-      <p className="text-gray-500 text-xs">Enter the airfoil features (except frequency) and get SSPL predictions across frequency bands.</p>
     </div>
+  </div>
   );
 }
 
