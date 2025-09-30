@@ -44,13 +44,21 @@ The dataset required comprehensive preprocessing to ensure optimal model perform
 * Maintained data quality by ensuring unique observations
 * Final dataset shape: **1427 rows × 6 columns**
 
+### **Data Modeling Before Feature Scaling**
+
+* Visualizing the data before feature scaling is important because it helps us understand the original ranges, detect outliers, and identify any imbalances or skewness that could affect the performance of the machine learning algorithms.
+
+Comprehensive histogram analysis revealed the distribution patterns of all variables before nomrmalization and feature scaling to balance the values:
+<img width="1389" height="1180" alt="Histogram before Feature Scaling" src="https://github.com/user-attachments/assets/6036b5f7-85f9-4b13-9e05-adb1eb5e50db" />
+
+Comprehensive heatmap before nomrmalization and feature scaling to balance the values:
+<img width="916" height="836" alt="Heatmap before Feature Scaling" src="https://github.com/user-attachments/assets/218b70d0-03f0-44e5-b6d2-20733842d6ee" />
+
 ### **4. Feature Scaling**
 
 * Applied **StandardScaler** to normalize all features
 * Ensured zero mean and unit variance for optimal model performance
 * Prevented feature dominance due to different scales
-
-**Note:** We didn't encode the independent and dependent variables because all of the values in the csv file are already floats. Encoding is only needed when there is categorical data or labels that need to be converted to numerical values.
 
 The first few rows of our cleaned DataFrame look like this:
 
@@ -130,6 +138,9 @@ We implemented and compared several regression algorithms:
 - **MSE**: 3.21
 - **R² Score**: 0.927
 - Best baseline performance
+
+The following graph compares the results of each model. The visual reveals the Random Forest Regressor to be the most accurate prediction model.
+<img width="1789" height="590" alt="Comparison of Models" src="https://github.com/user-attachments/assets/feb055d5-a237-4702-a23e-8196e187a21a" />
 
 ### **Hyperparameter Optimization**
 
