@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import ParticleEffect from './ParticleEffect';
+import JetBar from './JetBar';
 // Utility to map SSPL to gain (volume), e.g., normalize to [0,1]
 function ssplToGain(sspl, minSSPL, maxSSPL) {
   // Map SSPL linearly to [0.1, 1] for audibility, avoid 0
@@ -296,67 +297,28 @@ function App() {
 
   return (
     <div style={{height: '100vh'}}>
-  <div className="min-h-screen flex flex-col items-center bg-gray-100 pt-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Airfoil Noise Model Predictor</h1>
-      <div className="text-gray-700 mt-2" style={{zIndex:3, position:'relative'}}>Drag the plane to set Angle of Attack (alpha)</div>
-      {/* Large central plane visual for angle */}
-      <div
-        className="flex flex-col items-center mb-8 overflow-hidden pr-3"
-        style={{
-          position: 'relative',
-          width: '8rem',
-          height: '8rem',
-        }}
-      >
-        {/* Particle effect container */}
-  <ParticleEffect U_infinity={Number(inputs.U_infinity) || 0} />
-        {/* Plane visual, higher z-index */}
-        <div
-          ref={planeRef}
-          className="select-none absolute left-0 top-0"
-          style={{
-            width: '8rem',
-            height: '8rem',
-            marginLeft: '4rem',
-            transform: `rotate(${angle}deg)`,
-            transition: dragging ? 'none' : 'transform 0.2s',
-            userSelect: 'none',
-            cursor: dragging ? 'grabbing': 'grab',
-          }}
-          onMouseDown={handlePlanePointerDown}
-          onTouchStart={handlePlanePointerDown}
-        >
-          <img
-            src="/fighter_jet.png"
-            alt="Fighter Jet"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-            draggable={false}
-          />
-          {/* Angle label overlay */}
-          <span className="absolute left-1/2 top-1/2 text-2xl font-bold text-blue-700" style={{transform:'translate(-50%,120%)'}}>
-            {angle.toFixed(1)}°
-          </span>
-        </div>
-  </div>
+      <div>
+        <h1>Airfoil Noise Model Predictor</h1>
+        <div style={{zIndex:3, position:'relative'}}>Drag the plane to set Angle of Attack (alpha)</div>
+        {/* JetBar component with jet and particle effect */}
+        <JetBar
+          angle={angle}
+          dragging={dragging}
+          planeRef={planeRef}
+          handlePlanePointerDown={handlePlanePointerDown}
+          inputs={inputs}
+          U_infinity={inputs.U_infinity}
+        />
 
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-xl px-8 pt-6 pb-8 mb-4 w-full max-w-md">
-        <label className="block text-gray-700 text-sm font-bold mb-2">Model Inputs (Frequency will be swept automatically)</label>
+  <form onSubmit={handleSubmit}>
+  <label>Model Inputs (Frequency will be swept automatically)</label>
         {/* Render other inputs except alpha */}
         {featureNames.filter(f => f.key !== 'alpha').map((feature) => (
-          <div key={feature.key} className="mb-4">
-            <label className="block text-gray-700 text-xs font-bold mb-1" htmlFor={feature.key}>{feature.label}</label>
+          <div key={feature.key}>
+            <label htmlFor={feature.key}>{feature.label}</label>
             {feature.key === 'U_infinity' ? (
-              <div className="flex flex-col">
-                <div className="relative w-full flex items-center">
+              <div>
+                <div>
                   <input
                     type="range"
                     name="U_infinity"
@@ -366,10 +328,10 @@ function App() {
                     step="1"
                     value={inputs.U_infinity}
                     onChange={handleInputChange}
-                    className="w-full accent-blue-500 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                    
                     style={{ minWidth: '350px', maxWidth: '100%' }}
                   />
-                  <span className="absolute right-0 -top-7 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded shadow" style={{minWidth:'48px', textAlign:'center'}}>{inputs.U_infinity} m/s</span>
+                  <span style={{minWidth:'48px', textAlign:'center'}}>{inputs.U_infinity} m/s</span>
                 </div>
               </div>
             ) : (
@@ -380,7 +342,7 @@ function App() {
                 id={feature.key}
                 value={inputs[feature.key]}
                 onChange={handleInputChange}
-                className="shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                
                 required
               />
             )}
@@ -388,19 +350,19 @@ function App() {
         ))}
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 w-full flex items-center justify-center gap-2 transition-all shadow-md hover:scale-105"
+          
           disabled={loading}
         >
           {loading ? 'Sweeping Frequencies...' : 'Predict Audio'}
         </button>
-        {error && <p className="text-red-500 mt-2">{error}</p>}
+  {error && <p>{error}</p>}
       </form>
   {results.length > 0 && (
-    <div className="w-full max-w-2xl bg-white shadow-lg rounded-xl p-6 mb-4">
-      <h2 className="text-lg font-bold mb-4">SSPL vs Frequency</h2>
-      <div className="flex items-center gap-4 mb-6">
+  <div>
+  <h2>SSPL vs Frequency</h2>
+  <div>
         <button
-          className={`font-bold px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all shadow-md hover:scale-105 h-12 w-56 flex items-center justify-center gap-2 ${playing ? 'bg-red-500 hover:bg-red-700 text-white focus:ring-red-400' : 'bg-green-500 hover:bg-green-700 text-white focus:ring-green-400'}`}
+          
           style={{height: '48px', width: '224px', display: 'flex', alignItems: 'center', justifyContent: 'center'}} // fixed height and width for button
           onClick={playing ? handleStop : handlePlayAll}
           disabled={false}
